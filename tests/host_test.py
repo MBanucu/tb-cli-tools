@@ -43,6 +43,10 @@ class HostTest(unittest.TestCase):
                     proc.wait(timeout=5)
                 except subprocess.TimeoutExpired:
                     proc.kill()
+                    proc.wait()
+            for stream in (proc.stdin, proc.stdout, proc.stderr):
+                if stream:
+                    stream.close()
         self.tmp.cleanup()
 
     @property

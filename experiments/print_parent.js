@@ -97,17 +97,17 @@ this.tbPrint = class extends ExtensionAPI {
             stage = "window";
             const win = Services.wm.getMostRecentWindow("mail:3pane");
             if (!win) {
-              throw new Error("Kein Thunderbird-Hauptfenster");
+              throw new Error("No Thunderbird main window");
             }
             tabmail = win.document.getElementById("tabmail");
             if (!tabmail) {
-              throw new Error("tabmail nicht gefunden");
+              throw new Error("tabmail not found");
             }
 
             stage = "file";
             const file = new FileUtils.File(emlPath);
             if (!file.exists() || !file.isFile()) {
-              throw new Error("Datei nicht gefunden: " + emlPath);
+              throw new Error("File not found: " + emlPath);
             }
 
             stage = "pref";
@@ -229,7 +229,7 @@ this.tbPrint = class extends ExtensionAPI {
             stage = "verify";
             const result = new FileUtils.File(outPath);
             if (!result.exists()) {
-              throw new Error("PDF wurde nicht geschrieben: " + outPath);
+              throw new Error("PDF was not written: " + outPath);
             }
             const idoc = target.contentWindow && target.contentWindow.document;
             const imgs = idoc ? Array.from(idoc.images) : [];

@@ -63,12 +63,12 @@ async function findMessage(job) {
     const res = await querySafe({ subject: job.subject });
     if (res.messages && res.messages.length) return res.messages[0];
   }
-  throw new Error("Nachricht nicht gefunden: " + raw);
+  throw new Error("Message not found: " + raw);
 }
 
 async function fileFromUrl(url, name) {
   const r = await fetch(url, { cache: "no-store" });
-  if (r.status !== 200) throw new Error("Anhang nicht abrufbar: " + name + " (HTTP " + r.status + ")");
+  if (r.status !== 200) throw new Error("Attachment unavailable: " + name + " (HTTP " + r.status + ")");
   const blob = await r.blob();
   return new File([blob], name, { type: blob.type || "application/octet-stream" });
 }
@@ -85,7 +85,7 @@ async function runJob(job) {
       try {
         info.ping = await browser.tbPrint.ping();
       } catch (e) {
-        info.ping = "Fehler: " + String((e && e.message) || e);
+        info.ping = "Error: " + String((e && e.message) || e);
       }
     }
     return info;

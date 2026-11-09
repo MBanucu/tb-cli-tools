@@ -1,10 +1,9 @@
 #!/usr/bin/env python3
-"""Native-messaging-Host fuer tb-cli-tools.
+"""Native messaging host for tb-cli-tools.
 
-Startet Thunderbird selbst. Nimmt Auftraege ueber einen Unix-Socket vom CLI
-entgegen, reicht sie an die Erweiterung weiter und liefert deren Ergebnis
-zurueck. Anhaenge werden waehrend des Auftrags kurzzeitig ueber HTTP
-(127.0.0.1) bereitgestellt.
+Started by Thunderbird itself. Accepts jobs over a Unix socket from the CLIs,
+forwards them to the extension and returns its result. Attachments are served
+briefly over HTTP (127.0.0.1) for the duration of the job.
 """
 import http.server
 import json
@@ -73,8 +72,8 @@ class FileHandler(http.server.BaseHTTPRequestHandler):
             return
         with open(path, "rb") as fh:
             data = fh.read()
-        # Echten Typ liefern, damit die Erweiterung Anhaenge mit
-        # text/plain bzw. image/jpeg statt application/octet-stream anhaengt.
+        # Serve the real type so the extension attaches files as text/plain or
+        # image/jpeg instead of application/octet-stream.
         ctype = mimetypes.guess_type(path)[0] or "application/octet-stream"
         self.send_response(200)
         self.send_header("Content-Type", ctype)
@@ -97,7 +96,7 @@ def handle_client(conn):
                 if not ensure_http():
                     stream.write((json.dumps({
                         "ok": False,
-                        "error": "HTTP-Port %d belegt - Anhaenge nicht moeglich" % HTTP_PORT,
+                        "error": "HTTP port %d already in use - attachments not possible" % HTTP_PORT,
                     }) + "\n").encode("utf-8"))
                     stream.flush()
                     return
@@ -116,21 +115,21 @@ def handle_client(conn):
                 ]
 
             write_message({"type": "job", "id": job_id, "job": job})
-            log("Auftrag %s an Erweiterung gegeben" % job_id[:8])
+            log("job %s handed to the extension" % job_id[:8])
 
             with results_cond:
                 deadline = time.time() + MAX_WAIT
                 while job_id not in results and time.time() < deadline:
                     results_cond.wait(timeout=1)
-                res = results.pop(job_id, {"ok": False, "error": "Zeitueberschreitung im Host"})
+                res = results.pop(job_id, {"ok": False, "error": "timeout in the host"})
             stream.write((json.dumps(res) + "\n").encode("utf-8"))
             stream.flush()
     except Exception as exc:  # CLI soll eine Antwort bekommen, kein haengender Socket
-        log("Fehler beim Auftrag: %r" % (exc,))
+        log("job failed: %r" % (exc,))
 
 
 def socket_is_served():
-    """True, wenn ein anderer Host den Socket bereits bedient."""
+    """True if another host already serves the socket."""
     probe = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
     probe.settimeout(0.5)
     try:
@@ -143,7 +142,7 @@ def socket_is_served():
 
 
 def ensure_http():
-    """HTTP fuer Anhaenge erst bei Bedarf starten - der Port kann belegt sein."""
+    """Start HTTP for attachments only on demand - the port may be taken."""
     global http_started
     with http_lock:
         if http_started:
@@ -151,17 +150,17 @@ def ensure_http():
         try:
             http_srv = http.server.ThreadingHTTPServer(("127.0.0.1", HTTP_PORT), FileHandler)
         except OSError as exc:
-            log("HTTP-Port %d nicht verfuegbar: %r" % (HTTP_PORT, exc))
+            log("HTTP port %d unavailable: %r" % (HTTP_PORT, exc))
             return False
         threading.Thread(target=http_srv.serve_forever, daemon=True).start()
         http_started = True
-        log("HTTP bereit: 127.0.0.1:%d" % HTTP_PORT)
+        log("HTTP ready: 127.0.0.1:%d" % HTTP_PORT)
         return True
 
 
 def serve_socket():
     if socket_is_served():
-        log("Socket %s wird bereits bedient - ueberzaehliger Host beendet" % SOCK_PATH)
+        log("socket %s already served - exiting redundant host" % SOCK_PATH)
         os._exit(0)
     try:
         os.unlink(SOCK_PATH)
@@ -171,7 +170,7 @@ def serve_socket():
     srv.bind(SOCK_PATH)
     os.chmod(SOCK_PATH, 0o600)
     srv.listen(8)
-    log("Socket bereit: %s" % SOCK_PATH)
+    log("socket ready: %s" % SOCK_PATH)
     while True:
         conn, _ = srv.accept()
         threading.Thread(target=handle_client, args=(conn,), daemon=True).start()
@@ -179,7 +178,7 @@ def serve_socket():
 
 def main():
     threading.Thread(target=serve_socket, daemon=True).start()
-    log("Host gestartet (HTTP 127.0.0.1:%d bei Bedarf)" % HTTP_PORT)
+    log("host started (HTTP 127.0.0.1:%d on demand)" % HTTP_PORT)
     while True:
         msg = read_message()
         if msg is None:
@@ -188,7 +187,7 @@ def main():
             with results_cond:
                 results[msg.get("id")] = msg
                 results_cond.notify_all()
-    log("Host beendet")
+    log("host stopped")
     try:
         os.unlink(SOCK_PATH)
     except OSError:

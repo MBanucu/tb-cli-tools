@@ -1,21 +1,21 @@
 [
   {
     "namespace": "tbPrint",
-    "description": "Druckt eine .eml-Datei ueber Thunderbirds eigene Druckengine als PDF.",
+    "description": "Prints an .eml file to PDF through Thunderbird's own print engine.",
     "functions": [
       {
         "name": "printEml",
         "type": "function",
         "async": true,
-        "description": "Oeffnet die .eml als Nachricht und druckt sie mit dem Pseudo-Drucker 'Mozilla Save to PDF' in die angegebene Datei.",
+        "description": "Opens the .eml as a message and prints it to the given file with the 'Mozilla Save to PDF' pseudo printer.",
         "parameters": [
           {
             "name": "details",
             "type": "object",
             "properties": {
-              "emlPath": { "type": "string", "description": "Absoluter Pfad zur .eml-Datei." },
-              "outPath": { "type": "string", "description": "Absoluter Pfad der zu schreibenden PDF-Datei." },
-              "probe": { "type": "boolean", "optional": true, "description": "Nur Diagnose zurueckgeben." }
+              "emlPath": { "type": "string", "description": "Absolute path to the .eml file." },
+              "outPath": { "type": "string", "description": "Absolute path of the PDF file to write." },
+              "probe": { "type": "boolean", "optional": true, "description": "Return diagnostics only." }
             }
           }
         ]

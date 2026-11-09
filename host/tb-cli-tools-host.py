@@ -28,6 +28,8 @@ write_lock = threading.Lock()
 files = {}
 results = {}
 results_cond = threading.Condition()
+http_lock = threading.Lock()
+http_started = False
 
 
 def log(msg):
@@ -92,6 +94,13 @@ def handle_client(conn):
             job_id = uuid.uuid4().hex
 
             if job.get("attachments"):
+                if not ensure_http():
+                    stream.write((json.dumps({
+                        "ok": False,
+                        "error": "HTTP-Port %d belegt - Anhaenge nicht moeglich" % HTTP_PORT,
+                    }) + "\n").encode("utf-8"))
+                    stream.flush()
+                    return
                 token = uuid.uuid4().hex
                 names = {}
                 for path in job["attachments"]:
@@ -120,7 +129,40 @@ def handle_client(conn):
         log("Fehler beim Auftrag: %r" % (exc,))
 
 
+def socket_is_served():
+    """True, wenn ein anderer Host den Socket bereits bedient."""
+    probe = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+    probe.settimeout(0.5)
+    try:
+        probe.connect(SOCK_PATH)
+        return True
+    except OSError:
+        return False
+    finally:
+        probe.close()
+
+
+def ensure_http():
+    """HTTP fuer Anhaenge erst bei Bedarf starten - der Port kann belegt sein."""
+    global http_started
+    with http_lock:
+        if http_started:
+            return True
+        try:
+            http_srv = http.server.ThreadingHTTPServer(("127.0.0.1", HTTP_PORT), FileHandler)
+        except OSError as exc:
+            log("HTTP-Port %d nicht verfuegbar: %r" % (HTTP_PORT, exc))
+            return False
+        threading.Thread(target=http_srv.serve_forever, daemon=True).start()
+        http_started = True
+        log("HTTP bereit: 127.0.0.1:%d" % HTTP_PORT)
+        return True
+
+
 def serve_socket():
+    if socket_is_served():
+        log("Socket %s wird bereits bedient - ueberzaehliger Host beendet" % SOCK_PATH)
+        os._exit(0)
     try:
         os.unlink(SOCK_PATH)
     except FileNotFoundError:
@@ -137,9 +179,7 @@ def serve_socket():
 
 def main():
     threading.Thread(target=serve_socket, daemon=True).start()
-    http_srv = http.server.ThreadingHTTPServer(("127.0.0.1", HTTP_PORT), FileHandler)
-    threading.Thread(target=http_srv.serve_forever, daemon=True).start()
-    log("Host gestartet (HTTP 127.0.0.1:%d)" % HTTP_PORT)
+    log("Host gestartet (HTTP 127.0.0.1:%d bei Bedarf)" % HTTP_PORT)
     while True:
         msg = read_message()
         if msg is None:

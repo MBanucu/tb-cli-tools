@@ -1,6 +1,6 @@
 {
   "name": "tb_cli_tools",
-  "description": "Bruecke zwischen tb-reply.py und dem Thunderbird-Add-on tb-cli-tools",
+  "description": "Bridge between the tb-cli-tools CLIs and the tb-cli-tools Thunderbird add-on",
   "path": "@HOST@",
   "type": "stdio",
   "allowed_extensions": ["tb-cli-tools@local"]

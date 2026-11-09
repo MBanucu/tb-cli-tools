@@ -68,6 +68,15 @@
           node --test tests/quote.test.mjs
           touch $out
         '';
+
+        host-tests = pkgs.runCommand "tb-cli-tools-host-tests" {
+          nativeBuildInputs = [ pkgs.python3 ];
+        } ''
+          cp -r ${./.} repo
+          cd repo
+          python3 tests/host_test.py
+          touch $out
+        '';
       });
     };
 }

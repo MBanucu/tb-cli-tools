@@ -15,7 +15,8 @@ bleibt offen und wird von Hand gesendet; nichts wird automatisch verschickt.
 | `host/tb-cli-tools.json.in` | Host-Manifest, `@HOST@` wird ersetzt (Pfad ohne Leerzeichen!) |
 | `cli/tb-reply.py` | CLI für Antworten |
 | `cli/tb-print.py` | CLI für PDF-Druck |
-| `tests/quote.test.mjs` | Unit-Tests für `quote.js` (`node --test tests/`) |
+| `tests/quote.test.mjs` | Unit-Tests für `quote.js` (`node --test tests/quote.test.mjs`) |
+| `tests/host_test.py` | Tests für den Native-Messaging-Host (`python3 tests/host_test.py`) |
 | `flake.nix` | XPI, Host und CLI-Wrapper als Nix-Pakete |
 
 ## Installation mit Nix / NixOS
@@ -129,4 +130,17 @@ Hinweise:
 ```bash
 rm -rf ~/.thunderbird/<profil>/extensions/tb-cli-tools@local
 rm -f  ~/.mozilla/native-messaging-hosts/tb_cli_tools.json
+```
+
+## Tests
+
+```bash
+node --test tests/quote.test.mjs   # Zitat-Zusammenbau
+python3 tests/host_test.py         # Host: belegter HTTP-Port, zweite Instanz, toter Socket
+```
+
+Beides laeuft auch als Flake-Check:
+
+```bash
+nix build .#checks.x86_64-linux.quote-tests .#checks.x86_64-linux.host-tests
 ```

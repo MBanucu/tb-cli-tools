@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Native-messaging-Host fuer tb-cli-reply.
+"""Native-messaging-Host fuer tb-cli-tools.
 
 Startet Thunderbird selbst. Nimmt Auftraege ueber einen Unix-Socket vom CLI
 entgegen, reicht sie an die Erweiterung weiter und liefert deren Ergebnis
@@ -18,10 +18,10 @@ import time
 import urllib.parse
 import uuid
 
-SOCK_PATH = os.environ.get("TB_CLI_REPLY_SOCK") or os.path.join(
-    os.environ.get("XDG_RUNTIME_DIR", "/tmp"), "tb-cli-reply.sock"
+SOCK_PATH = os.environ.get("TB_CLI_TOOLS_SOCK") or os.path.join(
+    os.environ.get("XDG_RUNTIME_DIR", "/tmp"), "tb-cli-tools.sock"
 )
-HTTP_PORT = int(os.environ.get("TB_CLI_REPLY_HTTP_PORT", "8767"))
+HTTP_PORT = int(os.environ.get("TB_CLI_TOOLS_HTTP_PORT", "8767"))
 MAX_WAIT = 300
 
 write_lock = threading.Lock()

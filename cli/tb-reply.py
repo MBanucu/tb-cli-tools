@@ -14,8 +14,8 @@ import sys
 
 
 def socket_path():
-    return os.environ.get("TB_CLI_REPLY_SOCK") or os.path.join(
-        os.environ.get("XDG_RUNTIME_DIR", "/tmp"), "tb-cli-reply.sock"
+    return os.environ.get("TB_CLI_TOOLS_SOCK") or os.path.join(
+        os.environ.get("XDG_RUNTIME_DIR", "/tmp"), "tb-cli-tools.sock"
     )
 
 

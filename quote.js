@@ -1,4 +1,4 @@
-/* Zitat-Zusammenbau fuer tb-cli-reply.
+/* Zitat-Zusammenbau fuer tb-cli-tools.
  *
  * Wird als klassisches Background-Script geladen (manifest.json: zuerst
  * quote.js, dann background.js) und von tests/quote.test.mjs geprueft.

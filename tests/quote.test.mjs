@@ -1,4 +1,4 @@
-/* Tests fuer den Zitat-Zusammenbau von tb-cli-reply.
+/* Tests fuer den Zitat-Zusammenbau von tb-cli-tools.
  *
  * Aufruf:  node --test Tools/tb-reply/tests/
  */

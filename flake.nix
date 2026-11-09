@@ -21,7 +21,7 @@
 
           # Unsigned XPI for sideloading or policy install (ExtensionSettings).
           # Experiment APIs are not accepted by AMO, so signing is not an option.
-          xpi = pkgs.runCommand "tb-cli-reply-${version}.xpi" {
+          xpi = pkgs.runCommand "tb-cli-tools-${version}.xpi" {
             nativeBuildInputs = [ pkgs.zip ];
           } ''
             mkdir addon
@@ -37,19 +37,19 @@
 
           # Native-messaging host plus its manifest. The manifest expects a path
           # without spaces, which a store path always is.
-          host = pkgs.runCommand "tb-cli-reply-host-${version}" { } ''
+          host = pkgs.runCommand "tb-cli-tools-host-${version}" { } ''
             mkdir -p $out/bin $out/lib/mozilla/native-messaging-hosts
-            install -m755 ${./host/tb-cli-reply-host.py} $out/bin/tb-cli-reply-host.py
-            substituteInPlace $out/bin/tb-cli-reply-host.py \
+            install -m755 ${./host/tb-cli-tools-host.py} $out/bin/tb-cli-tools-host.py
+            substituteInPlace $out/bin/tb-cli-tools-host.py \
               --replace-fail '#!/usr/bin/env python3' '#!${pkgs.python3}/bin/python3'
-            install -m644 ${./host/tb-cli-reply.json.in} \
-              $out/lib/mozilla/native-messaging-hosts/tb_cli_reply.json
-            substituteInPlace $out/lib/mozilla/native-messaging-hosts/tb_cli_reply.json \
-              --replace-fail '@HOST@' "$out/bin/tb-cli-reply-host.py"
+            install -m644 ${./host/tb-cli-tools.json.in} \
+              $out/lib/mozilla/native-messaging-hosts/tb_cli_tools.json
+            substituteInPlace $out/lib/mozilla/native-messaging-hosts/tb_cli_tools.json \
+              --replace-fail '@HOST@' "$out/bin/tb-cli-tools-host.py"
           '';
 
           # tb-reply and tb-print on PATH.
-          cli = pkgs.runCommand "tb-cli-reply-cli-${version}" { } ''
+          cli = pkgs.runCommand "tb-cli-tools-cli-${version}" { } ''
             mkdir -p $out/bin
             install -m755 ${./cli/tb-reply.py} $out/bin/tb-reply
             install -m755 ${./cli/tb-print.py} $out/bin/tb-print
@@ -60,7 +60,7 @@
       );
 
       checks = forAllSystems (pkgs: {
-        quote-tests = pkgs.runCommand "tb-cli-reply-tests" {
+        quote-tests = pkgs.runCommand "tb-cli-tools-tests" {
           nativeBuildInputs = [ pkgs.nodejs ];
         } ''
           cp -r ${./.} repo

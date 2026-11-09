@@ -1,7 +1,0 @@
-{
-  "name": "tb_cli_reply",
-  "description": "Bruecke zwischen tb-reply.py und dem Thunderbird-Add-on tb-cli-reply",
-  "path": "@HOST@",
-  "type": "stdio",
-  "allowed_extensions": ["tb-cli-reply@local"]
-}

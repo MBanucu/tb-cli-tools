@@ -1,6 +1,6 @@
 
 
-const HOST_NAME = "tb_cli_reply";
+const HOST_NAME = "tb_cli_tools";
 let port = null;
 let reconnectTimer = null;
 
@@ -149,6 +149,6 @@ async function runJob(job) {
 
 // Event-Page wach halten: offener native-Port tut das, Wecker als Rueckfall
 if (browser.alarms) {
-  browser.alarms.create("tb-cli-reply-keepalive", { periodInMinutes: 1 });
+  browser.alarms.create("tb-cli-tools-keepalive", { periodInMinutes: 1 });
 }
 connect();

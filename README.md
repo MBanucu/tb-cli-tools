@@ -1,4 +1,4 @@
-# tb-cli-reply
+# tb-cli-tools
 
 Thunderbird-Add-on plus CLI, das per Kommandozeile eine **echte Antwort**
 erzeugt — mit Betreff, Empfänger, `In-Reply-To`/`References` und dem Zitat, das
@@ -10,9 +10,9 @@ bleibt offen und wird von Hand gesendet; nichts wird automatisch verschickt.
 
 | Pfad | Zweck |
 |---|---|
-| `manifest.json`, `background.js`, `quote.js`, `experiments/` | Add-on (Manifest V3, ID `tb-cli-reply@local`, Version 1.0) |
-| `host/tb-cli-reply-host.py` | Native-Messaging-Host: Socket für das CLI, HTTP für Anhangsdaten |
-| `host/tb-cli-reply.json.in` | Host-Manifest, `@HOST@` wird ersetzt (Pfad ohne Leerzeichen!) |
+| `manifest.json`, `background.js`, `quote.js`, `experiments/` | Add-on (Manifest V3, ID `tb-cli-tools@local`, Version 1.0) |
+| `host/tb-cli-tools-host.py` | Native-Messaging-Host: Socket für das CLI, HTTP für Anhangsdaten |
+| `host/tb-cli-tools.json.in` | Host-Manifest, `@HOST@` wird ersetzt (Pfad ohne Leerzeichen!) |
 | `cli/tb-reply.py` | CLI für Antworten |
 | `cli/tb-print.py` | CLI für PDF-Druck |
 | `tests/quote.test.mjs` | Unit-Tests für `quote.js` (`node --test tests/`) |
@@ -23,9 +23,9 @@ bleibt offen und wird von Hand gesendet; nichts wird automatisch verschickt.
 Das Flake liefert drei Pakete:
 
 ```bash
-nix build github:MBanucu/tb-cli-reply#xpi   # -> result: tb-cli-reply-1.0.xpi
-nix build github:MBanucu/tb-cli-reply#host  # Native-Messaging-Host + Manifest
-nix build github:MBanucu/tb-cli-reply#cli   # tb-reply und tb-print
+nix build github:MBanucu/tb-cli-tools#xpi   # -> result: tb-cli-tools-1.0.xpi
+nix build github:MBanucu/tb-cli-tools#host  # Native-Messaging-Host + Manifest
+nix build github:MBanucu/tb-cli-tools#cli   # tb-reply und tb-print
 ```
 
 Das Add-on nutzt eine Experiment-API (`tbPrint`) und ist daher unsigniert;
@@ -34,26 +34,26 @@ Thunderbird-Enterprise-Policies, nicht durch Kopieren in das Profil:
 
 ```nix
 # flake.nix
-inputs.tb-cli-reply = {
-  url = "github:MBanucu/tb-cli-reply";
+inputs.tb-cli-tools = {
+  url = "github:MBanucu/tb-cli-tools";
   inputs.nixpkgs.follows = "nixpkgs";
 };
 
 # configuration.nix
 users.users.michi.packages = [
   (pkgs.thunderbird-latest.override {
-    extraPolicies.ExtensionSettings."tb-cli-reply@local" = {
+    extraPolicies.ExtensionSettings."tb-cli-tools@local" = {
       installation_mode = "force_installed";
-      install_url = "file://${tb-cli-reply.packages.${system}.xpi}";
+      install_url = "file://${tb-cli-tools.packages.${system}.xpi}";
       updates_disabled = true;
     };
   })
 ];
 
 # Home Manager: Host-Manifest und CLIs
-home.file.".mozilla/native-messaging-hosts/tb_cli_reply.json".source =
-  "${tb-cli-reply.packages.${system}.host}/lib/mozilla/native-messaging-hosts/tb_cli_reply.json";
-home.packages = [ tb-cli-reply.packages.${system}.cli ];
+home.file.".mozilla/native-messaging-hosts/tb_cli_tools.json".source =
+  "${tb-cli-tools.packages.${system}.host}/lib/mozilla/native-messaging-hosts/tb_cli_tools.json";
+home.packages = [ tb-cli-tools.packages.${system}.cli ];
 ```
 
 Nach Änderungen Thunderbird neu starten. Die Version im `manifest.json` muss
@@ -63,11 +63,11 @@ sich ändern, damit Thunderbird eine neue XPI übernimmt.
 
 ```bash
 P=~/.thunderbird/<profil>
-mkdir -p "$P/extensions/tb-cli-reply@local" "$P/NativeMessagingHosts"
-cp manifest.json background.js quote.js "$P/extensions/tb-cli-reply@local/"
-cp -r experiments "$P/extensions/tb-cli-reply@local/"
-cp host/tb-cli-reply.json.in "$P/NativeMessagingHosts/tb_cli_reply.json"
-# @HOST@ im Manifest durch den absoluten Pfad zu tb-cli-reply-host.py ersetzen
+mkdir -p "$P/extensions/tb-cli-tools@local" "$P/NativeMessagingHosts"
+cp manifest.json background.js quote.js "$P/extensions/tb-cli-tools@local/"
+cp -r experiments "$P/extensions/tb-cli-tools@local/"
+cp host/tb-cli-tools.json.in "$P/NativeMessagingHosts/tb_cli_tools.json"
+# @HOST@ im Manifest durch den absoluten Pfad zu tb-cli-tools-host.py ersetzen
 grep -q extensions.autoDisableScopes "$P/prefs.js" || \
   echo 'user_pref("extensions.autoDisableScopes", 0);' >> "$P/prefs.js"
 ```
@@ -127,6 +127,6 @@ Hinweise:
 ## Entfernen
 
 ```bash
-rm -rf ~/.thunderbird/<profil>/extensions/tb-cli-reply@local
-rm -f  ~/.mozilla/native-messaging-hosts/tb_cli_reply.json
+rm -rf ~/.thunderbird/<profil>/extensions/tb-cli-tools@local
+rm -f  ~/.mozilla/native-messaging-hosts/tb_cli_tools.json
 ```

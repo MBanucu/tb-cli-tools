@@ -100,16 +100,21 @@ async function runJob(job) {
   }
 
   if (job.action === "compose") {
-    const details = {
-      subject: String(job.subject || ""),
-      body: String(job.body || ""),
-    };
+    const details = { subject: String(job.subject || "") };
+    const body = String(job.body || "");
+    // beginNew lehnt isPlainText:true zusammen mit "body" ab ("Conflicting
+    // format setting"); im Textmodus muss der Text in plainTextBody stehen.
+    if (job.plainText === false) {
+      details.isPlainText = false;
+      details.body = body;
+    } else {
+      details.isPlainText = true;
+      details.plainTextBody = body;
+    }
     const to = (job.to || []).filter(Boolean);
     if (to.length) details.to = to;
     if ((job.cc || []).length) details.cc = job.cc;
     if ((job.bcc || []).length) details.bcc = job.bcc;
-    if (job.plainText === true) details.isPlainText = true;
-    if (job.plainText === false) details.isPlainText = false;
 
     const tab = await browser.compose.beginNew(details);
     for (const a of (job.attachmentUrls || [])) {

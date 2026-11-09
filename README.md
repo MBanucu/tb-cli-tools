@@ -10,7 +10,7 @@ bleibt offen und wird von Hand gesendet; nichts wird automatisch verschickt.
 
 | Pfad | Zweck |
 |---|---|
-| `manifest.json`, `background.js`, `quote.js`, `experiments/` | Add-on (Manifest V3, ID `tb-cli-tools@local`, Version 1.1) |
+| `manifest.json`, `background.js`, `quote.js`, `experiments/` | Add-on (Manifest V3, ID `tb-cli-tools@local`, Version 1.2) |
 | `host/tb-cli-tools-host.py` | Native-Messaging-Host: Socket für das CLI, HTTP für Anhangsdaten |
 | `host/tb-cli-tools.json.in` | Host-Manifest, `@HOST@` wird ersetzt (Pfad ohne Leerzeichen!) |
 | `cli/tb-compose.py` | CLI für neue Nachrichten |
@@ -25,7 +25,7 @@ bleibt offen und wird von Hand gesendet; nichts wird automatisch verschickt.
 Das Flake liefert drei Pakete:
 
 ```bash
-nix build github:MBanucu/tb-cli-tools#xpi   # -> result: tb-cli-tools-1.0.xpi
+nix build github:MBanucu/tb-cli-tools#xpi   # -> result: tb-cli-tools-1.2.xpi
 nix build github:MBanucu/tb-cli-tools#host  # Native-Messaging-Host + Manifest
 nix build github:MBanucu/tb-cli-tools#cli   # tb-reply, tb-compose und tb-print
 ```
@@ -86,8 +86,9 @@ tb-compose --to artur.kuhn@jobcenter-ge.de \
 ```
 
 Legt ein Verfassen-Fenster mit Empfänger, Betreff und Text an (`compose.beginNew`);
-gesendet wird von Hand. `--cc`, `--bcc`, `--attach` sowie `--html`/`--text`
-funktionieren wie bei `tb-reply`.
+gesendet wird von Hand. Der Text wird standardmäßig als reiner Text gesetzt
+(`isPlainText` + `plainTextBody`); mit `--html` gilt er als HTML. `--cc`,
+`--bcc` und `--attach` funktionieren wie bei `tb-reply`.
 
 ## Antworten
 

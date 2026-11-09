@@ -10,9 +10,10 @@ bleibt offen und wird von Hand gesendet; nichts wird automatisch verschickt.
 
 | Pfad | Zweck |
 |---|---|
-| `manifest.json`, `background.js`, `quote.js`, `experiments/` | Add-on (Manifest V3, ID `tb-cli-tools@local`, Version 1.0) |
+| `manifest.json`, `background.js`, `quote.js`, `experiments/` | Add-on (Manifest V3, ID `tb-cli-tools@local`, Version 1.1) |
 | `host/tb-cli-tools-host.py` | Native-Messaging-Host: Socket für das CLI, HTTP für Anhangsdaten |
 | `host/tb-cli-tools.json.in` | Host-Manifest, `@HOST@` wird ersetzt (Pfad ohne Leerzeichen!) |
+| `cli/tb-compose.py` | CLI für neue Nachrichten |
 | `cli/tb-reply.py` | CLI für Antworten |
 | `cli/tb-print.py` | CLI für PDF-Druck |
 | `tests/quote.test.mjs` | Unit-Tests für `quote.js` (`node --test tests/quote.test.mjs`) |
@@ -26,7 +27,7 @@ Das Flake liefert drei Pakete:
 ```bash
 nix build github:MBanucu/tb-cli-tools#xpi   # -> result: tb-cli-tools-1.0.xpi
 nix build github:MBanucu/tb-cli-tools#host  # Native-Messaging-Host + Manifest
-nix build github:MBanucu/tb-cli-tools#cli   # tb-reply und tb-print
+nix build github:MBanucu/tb-cli-tools#cli   # tb-reply, tb-compose und tb-print
 ```
 
 Das Add-on nutzt eine Experiment-API (`tbPrint`) und ist daher unsigniert;
@@ -75,6 +76,18 @@ grep -q extensions.autoDisableScopes "$P/prefs.js" || \
 
 Der Host muss an einem Pfad **ohne Leerzeichen** liegen, weil `connectNative`
 `path` an Leerzeichen zerlegt.
+
+## Neue Nachricht
+
+```bash
+tb-compose --to artur.kuhn@jobcenter-ge.de \
+           --subject 'Kundennummer: 000D343391 - Bearbeitungsstand des Antrags' \
+           --body-file antwort.txt
+```
+
+Legt ein Verfassen-Fenster mit Empfänger, Betreff und Text an (`compose.beginNew`);
+gesendet wird von Hand. `--cc`, `--bcc`, `--attach` sowie `--html`/`--text`
+funktionieren wie bei `tb-reply`.
 
 ## Antworten
 

@@ -6,7 +6,7 @@
   outputs =
     { self, nixpkgs }:
     let
-      version = "1.0";
+      version = "1.1";
       systems = [
         "x86_64-linux"
         "aarch64-linux"
@@ -52,8 +52,9 @@
           cli = pkgs.runCommand "tb-cli-tools-cli-${version}" { } ''
             mkdir -p $out/bin
             install -m755 ${./cli/tb-reply.py} $out/bin/tb-reply
+            install -m755 ${./cli/tb-compose.py} $out/bin/tb-compose
             install -m755 ${./cli/tb-print.py} $out/bin/tb-print
-            substituteInPlace $out/bin/tb-reply $out/bin/tb-print \
+            substituteInPlace $out/bin/tb-reply $out/bin/tb-compose $out/bin/tb-print \
               --replace-fail '#!/usr/bin/env python3' '#!${pkgs.python3}/bin/python3'
           '';
         }

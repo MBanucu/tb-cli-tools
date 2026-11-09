@@ -99,6 +99,37 @@ async function runJob(job) {
     });
   }
 
+  if (job.action === "compose") {
+    const details = {
+      subject: String(job.subject || ""),
+      body: String(job.body || ""),
+    };
+    const to = (job.to || []).filter(Boolean);
+    if (to.length) details.to = to;
+    if ((job.cc || []).length) details.cc = job.cc;
+    if ((job.bcc || []).length) details.bcc = job.bcc;
+    if (job.plainText === true) details.isPlainText = true;
+    if (job.plainText === false) details.isPlainText = false;
+
+    const tab = await browser.compose.beginNew(details);
+    for (const a of (job.attachmentUrls || [])) {
+      await browser.compose.addAttachment(tab.id, { file: await fileFromUrl(a.url, a.name) });
+    }
+
+    const after = await browser.compose.getComposeDetails(tab.id);
+    const html = !after.isPlainText;
+    const finalBody = html ? (after.body || "") : (after.plainTextBody || "");
+    return {
+      ok: true,
+      windowId: tab.windowId,
+      to: (after.to || []).join(", "),
+      subject: after.subject,
+      format: html ? "html" : "text",
+      bodyChars: finalBody.length,
+      attachments: (await browser.compose.listAttachments(tab.id)).map((a) => a.name),
+    };
+  }
+
   const msg = await findMessage(job);
   const replyType = job.all ? "replyToAll" : "replyToSender";
 

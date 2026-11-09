@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "tb-cli-tools",
-  "version": "1.0",
-  "description": "Erzeugt per native-messaging-Auftrag eine echte Antwort im Verfassen-Fenster (Zitat + Threading wie der Antwort-Button) und druckt .eml-Dateien ueber Thunderbirds Druckengine als PDF.",
+  "version": "1.1",
+  "description": "Erzeugt per native-messaging-Auftrag eine echte Antwort im Verfassen-Fenster (Zitat + Threading wie der Antwort-Button), legt neue Nachrichten an und druckt .eml-Dateien ueber Thunderbirds Druckengine als PDF.",
   "browser_specific_settings": {
     "gecko": { "id": "tb-cli-tools@local", "strict_min_version": "128.0" }
   },

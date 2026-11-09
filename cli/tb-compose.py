@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""Legt per CLI eine neue Nachricht im Verfassen-Fenster an (ohne zu senden).
+"""Open a new message in the compose window from the command line (without sending).
 
-Beispiel:
+Example:
   ./tb-compose.py --to artur.kuhn@jobcenter-ge.de \
                   --subject 'Kundennummer: 000D343391 - Bearbeitungsstand des Antrags' \
                   --body-file antwort.txt
@@ -21,16 +21,16 @@ def socket_path():
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--to", action="append", required=True, help="Empfaenger (mehrfach moeglich)")
-    ap.add_argument("--cc", action="append", default=[], help="Cc (mehrfach moeglich)")
-    ap.add_argument("--bcc", action="append", default=[], help="Bcc (mehrfach moeglich)")
-    ap.add_argument("--subject", required=True, help="Betreff")
-    ap.add_argument("--body-file", required=True, help="Textdatei mit dem Nachrichtentext")
-    ap.add_argument("--attach", action="append", default=[], help="Datei anhaengen (mehrfach moeglich)")
+    ap.add_argument("--to", action="append", required=True, help="Recipient (may be repeated)")
+    ap.add_argument("--cc", action="append", default=[], help="Cc (may be repeated)")
+    ap.add_argument("--bcc", action="append", default=[], help="Bcc (may be repeated)")
+    ap.add_argument("--subject", required=True, help="Subject")
+    ap.add_argument("--body-file", required=True, help="Text file holding the message body")
+    ap.add_argument("--attach", action="append", default=[], help="Attach a file (may be repeated)")
     ap.add_argument("--html", dest="plain_text", action="store_false", default=None,
-                    help="Nachricht als HTML erzwingen (Standard: Format der Identity)")
+                    help="Force an HTML message (default: the identity's format)")
     ap.add_argument("--text", dest="plain_text", action="store_true",
-                    help="Nachricht als reinen Text erzwingen")
+                    help="Force a plain-text message")
     ap.add_argument("--timeout", type=float, default=60.0)
     ap.add_argument("--socket", default=socket_path())
     args = ap.parse_args()
@@ -53,7 +53,7 @@ def main():
     try:
         sock.connect(args.socket)
     except (FileNotFoundError, ConnectionRefusedError):
-        print("Kein Host erreichbar (%s). Laeuft Thunderbird mit aktivem Add-on?" % args.socket,
+        print("No host reachable (%s). Is Thunderbird running with the add-on enabled?" % args.socket,
               file=sys.stderr)
         return 3
     try:
@@ -62,10 +62,10 @@ def main():
             stream.flush()
             line = stream.readline()
     except socket.timeout:
-        print("Zeitueberschreitung: keine Antwort vom Add-on.", file=sys.stderr)
+        print("Timeout: no answer from the add-on.", file=sys.stderr)
         return 2
     if not line:
-        print("Verbindung ohne Antwort geschlossen.", file=sys.stderr)
+        print("Connection closed without an answer.", file=sys.stderr)
         return 2
     result = json.loads(line.decode("utf-8"))
     print(json.dumps(result, indent=2, ensure_ascii=False))

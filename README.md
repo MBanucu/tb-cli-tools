@@ -1,39 +1,39 @@
 # tb-cli-tools
 
-Thunderbird-Add-on plus CLI, das per Kommandozeile eine **echte Antwort**
-erzeugt — mit Betreff, Empfänger, `In-Reply-To`/`References` und dem Zitat, das
-Thunderbird selbst beim Klick auf „Antworten“ einfügt — und das eine `.eml` mit
-Thunderbirds eigener Druck-Pipeline als PDF ausgibt. Das Verfassen-Fenster
-bleibt offen und wird von Hand gesendet; nichts wird automatisch verschickt.
+Thunderbird add-on plus CLI tools that create a **real reply** from the command
+line — with subject, recipients, `In-Reply-To`/`References` and the quote that
+Thunderbird itself inserts when you click "Reply" — and that print an `.eml` to
+PDF through Thunderbird's own print pipeline. The compose window stays open and
+is sent by hand; nothing is ever sent automatically.
 
-## Aufbau
+## Layout
 
-| Pfad | Zweck |
+| Path | Purpose |
 |---|---|
-| `manifest.json`, `background.js`, `quote.js`, `experiments/` | Add-on (Manifest V3, ID `tb-cli-tools@local`, Version 1.3) |
-| `host/tb-cli-tools-host.py` | Native-Messaging-Host: Socket für das CLI, HTTP für Anhangsdaten |
-| `host/tb-cli-tools.json.in` | Host-Manifest, `@HOST@` wird ersetzt (Pfad ohne Leerzeichen!) |
-| `cli/tb-compose.py` | CLI für neue Nachrichten |
-| `cli/tb-reply.py` | CLI für Antworten |
-| `cli/tb-print.py` | CLI für PDF-Druck |
-| `tests/quote.test.mjs` | Unit-Tests für `quote.js` (`node --test tests/quote.test.mjs`) |
-| `tests/compose.test.mjs` | Regressionstest für den `compose`-Auftrag: Text gehört in `plainTextBody`, sonst lehnt `beginNew` ab und das Fenster bleibt leer |
-| `tests/host_test.py` | Tests für den Native-Messaging-Host (`python3 tests/host_test.py`) |
-| `flake.nix` | XPI, Host und CLI-Wrapper als Nix-Pakete |
+| `manifest.json`, `background.js`, `quote.js`, `experiments/` | Add-on (Manifest V3, ID `tb-cli-tools@local`, version 1.3) |
+| `host/tb-cli-tools-host.py` | Native-messaging host: socket for the CLIs, HTTP for attachment data |
+| `host/tb-cli-tools.json.in` | Host manifest, `@HOST@` is substituted (path must be free of spaces!) |
+| `cli/tb-compose.py` | CLI for new messages |
+| `cli/tb-reply.py` | CLI for replies |
+| `cli/tb-print.py` | CLI for PDF printing |
+| `tests/quote.test.mjs` | Unit tests for `quote.js` (`node --test tests/quote.test.mjs`) |
+| `tests/compose.test.mjs` | Regression test for the `compose` job: the text belongs in `plainTextBody`, otherwise `beginNew` rejects it and the window stays empty |
+| `tests/host_test.py` | Tests for the native-messaging host (`python3 tests/host_test.py`) |
+| `flake.nix` | XPI, host and CLI wrappers as Nix packages |
 
-## Installation mit Nix / NixOS
+## Installing with Nix / NixOS
 
-Das Flake liefert drei Pakete:
+The flake provides three packages:
 
 ```bash
 nix build github:MBanucu/tb-cli-tools#xpi   # -> result: tb-cli-tools-1.3.xpi
-nix build github:MBanucu/tb-cli-tools#host  # Native-Messaging-Host + Manifest
-nix build github:MBanucu/tb-cli-tools#cli   # tb-reply, tb-compose und tb-print
+nix build github:MBanucu/tb-cli-tools#host  # native-messaging host + manifest
+nix build github:MBanucu/tb-cli-tools#cli   # tb-reply, tb-compose and tb-print
 ```
 
-Das Add-on nutzt eine Experiment-API (`tbPrint`) und ist daher unsigniert;
-AMO-Signierung ist keine Option. Eingebunden wird es über die
-Thunderbird-Enterprise-Policies, nicht durch Kopieren in das Profil:
+The add-on uses an experiment API (`tbPrint`), so it is unsigned and AMO signing
+is not an option. It is installed through the Thunderbird enterprise policies,
+not by copying it into the profile:
 
 ```nix
 # flake.nix
@@ -53,109 +53,108 @@ users.users.michi.packages = [
   })
 ];
 
-# Home Manager: Host-Manifest und CLIs
+# Home Manager: host manifest and CLIs
 home.file.".mozilla/native-messaging-hosts/tb_cli_tools.json".source =
   "${tb-cli-tools.packages.${system}.host}/lib/mozilla/native-messaging-hosts/tb_cli_tools.json";
 home.packages = [ tb-cli-tools.packages.${system}.cli ];
 ```
 
-Nach Änderungen Thunderbird neu starten. Die Version im `manifest.json` muss
-sich ändern, damit Thunderbird eine neue XPI übernimmt.
+Restart Thunderbird after changes. The version in `manifest.json` has to change
+for Thunderbird to pick up a new XPI.
 
-## Manuelle Installation (ohne Nix)
+## Manual installation (without Nix)
 
 ```bash
-P=~/.thunderbird/<profil>
+P=~/.thunderbird/<profile>
 mkdir -p "$P/extensions/tb-cli-tools@local" "$P/NativeMessagingHosts"
 cp manifest.json background.js quote.js "$P/extensions/tb-cli-tools@local/"
 cp -r experiments "$P/extensions/tb-cli-tools@local/"
 cp host/tb-cli-tools.json.in "$P/NativeMessagingHosts/tb_cli_tools.json"
-# @HOST@ im Manifest durch den absoluten Pfad zu tb-cli-tools-host.py ersetzen
+# replace @HOST@ in the manifest with the absolute path to tb-cli-tools-host.py
 grep -q extensions.autoDisableScopes "$P/prefs.js" || \
   echo 'user_pref("extensions.autoDisableScopes", 0);' >> "$P/prefs.js"
 ```
 
-Der Host muss an einem Pfad **ohne Leerzeichen** liegen, weil `connectNative`
-`path` an Leerzeichen zerlegt.
+The host has to live at a path **without spaces**, because `connectNative` splits
+`path` on spaces.
 
-## Neue Nachricht
+## New message
 
 ```bash
 tb-compose --to artur.kuhn@jobcenter-ge.de \
            --subject 'Kundennummer: 000D343391 - Bearbeitungsstand des Antrags' \
-           --body-file antwort.txt
+           --body-file reply.txt
 ```
 
-Legt ein Verfassen-Fenster mit Empfänger, Betreff und Text an (`compose.beginNew`);
-gesendet wird von Hand. Der Text wird standardmäßig als reiner Text gesetzt
-(`isPlainText` + `plainTextBody`); mit `--html` gilt er als HTML. `--cc`,
-`--bcc` und `--attach` funktionieren wie bei `tb-reply`.
+Opens a compose window with recipient, subject and body (`compose.beginNew`); it
+is sent by hand. By default the text is set as plain text (`isPlainText` plus
+`plainTextBody`); with `--html` it is treated as HTML. `--cc`, `--bcc` and
+`--attach` work as they do for `tb-reply`.
 
-## Antworten
+## Replies
 
 ```bash
 tb-reply.py \
   --message-id '<WGE77EVW323_...@zendesk.com>' \
-  --body-file antwort.txt \
-  --attach anhang.pdf
+  --body-file reply.txt \
+  --attach attachment.pdf
 ```
 
-Optionen: `--all` (allen antworten), `--text` / `--html` (Format erzwingen; ohne
-Angabe gilt das Format der Identity, also normalerweise HTML wie beim
-Antwort-Button), `--timeout`, `--socket`.
-Ausgabe ist JSON mit `windowId`, `to`, `subject`, `bodyChars`, `quoted` und den
-angehängten Dateien. Exitcode 0 = Fenster steht bereit, 1 = Fehler der
-Erweiterung, 2 = Zeitüberschreitung, 3 = kein Host (Thunderbird aus).
+Options: `--all` (reply to all), `--text` / `--html` (force a format; without
+either the identity's format applies, which is normally HTML, as with the Reply
+button), `--timeout`, `--socket`.
+Output is JSON with `windowId`, `to`, `subject`, `bodyChars`, `quoted` and the
+attached files. Exit code 0 = window is ready, 1 = error from the extension,
+2 = timeout, 3 = no host (Thunderbird not running).
 
-## PDF drucken
+## Printing a PDF
 
 ```bash
-tb-print.py --eml "/pfad/mail.eml" --out "/pfad/mail.pdf"
+tb-print.py --eml "/path/mail.eml" --out "/path/mail.pdf"
 ```
 
-`experiments/print_parent.js` öffnet die `.eml` via `MailUtils.openEMLFile()`,
-wartet auf den fertig gerenderten messagepane und druckt dann mit
-`browsingContext.print()` und dem Pseudo-Drucker „Mozilla Save to PDF“: A4,
-12 mm Rand, ohne Kopf-/Fußzeile. Exitcodes wie oben.
+`experiments/print_parent.js` opens the `.eml` via `MailUtils.openEMLFile()`,
+waits for the messagepane to finish rendering and then prints with
+`browsingContext.print()` and the "Mozilla Save to PDF" pseudo-printer: A4,
+12 mm margin, no header or footer. Exit codes as above.
 
-Hinweise:
+Notes:
 
-- Die Experiment-API braucht `extensions.experiments.enabled` (standardmäßig
-  aktiv).
-- Thunderbird druckt einen Kopfblock (Subject/From/Date/To) und am Ende die
-  Anhangsliste; die Seitenumbrüche weichen von Browser-Druckausgaben ab.
-- Bei großen PDFs (Type-3-Schrift) hilft Ghostscript:
+- The experiment API needs `extensions.experiments.enabled` (enabled by default).
+- Thunderbird prints a header block (subject/from/date/to) and the attachment
+  list at the end; page breaks differ from browser print output.
+- For large PDFs (Type 3 fonts) Ghostscript helps:
   `gs -sDEVICE=pdfwrite -dPDFSETTINGS=/prepress -o out.pdf in.pdf`
 
-## Technische Notizen
+## Technical notes
 
-- Native Messaging statt HTTP-Polling: ein offener Port hält die Event-Page
-  wach. Mit Polling schlief sie nach ~30 s ein und Aufträge kamen nie an.
-- Das Zitat erzeugt Thunderbird selbst (`beginReply` = derselbe Code wie der
-  Antwort-Button). Der Antworttext wird nur davorgesetzt; das Zitat bleibt
-  unverändert, inklusive `moz-cite-prefix` und `blockquote type="cite"`.
-- Anhänge gehen nicht durch die 1-MB-Grenze von Native Messaging, sondern
-  werden vom Host kurzzeitig unter `http://127.0.0.1:8767/f/<token>/<name>`
-  bereitgestellt und von der Erweiterung als `File` angehängt.
-- `quote.js` baut den Antwort-Body; Details und Tests siehe
-  `tests/quote.test.mjs`.
+- Native messaging instead of HTTP polling: an open port keeps the event page
+  awake. With polling it fell asleep after ~30 s and jobs never arrived.
+- Thunderbird builds the quote itself (`beginReply` = the same code as the Reply
+  button). The reply text is only prepended; the quote stays untouched,
+  including `moz-cite-prefix` and `blockquote type="cite"`.
+- Attachments do not go through the 1 MB limit of native messaging; the host
+  serves them briefly at `http://127.0.0.1:8767/f/<token>/<name>` and the
+  extension attaches them as a `File`.
+- `quote.js` builds the reply body; see `tests/quote.test.mjs` for details and
+  tests.
 
-## Entfernen
+## Uninstalling
 
 ```bash
-rm -rf ~/.thunderbird/<profil>/extensions/tb-cli-tools@local
+rm -rf ~/.thunderbird/<profile>/extensions/tb-cli-tools@local
 rm -f  ~/.mozilla/native-messaging-hosts/tb_cli_tools.json
 ```
 
 ## Tests
 
 ```bash
-node --test tests/quote.test.mjs   # Zitat-Zusammenbau
-node --test tests/compose.test.mjs # compose-Payload gegen Thunderbirds Formatregeln
-python3 tests/host_test.py         # Host: belegter HTTP-Port, zweite Instanz, toter Socket
+node --test tests/quote.test.mjs   # quote assembly
+node --test tests/compose.test.mjs # compose payload against Thunderbird's format rules
+python3 tests/host_test.py         # host: port already taken, second instance, dead socket
 ```
 
-Beides laeuft auch als Flake-Check:
+All of them also run as flake checks:
 
 ```bash
 nix build .#checks.x86_64-linux.quote-tests .#checks.x86_64-linux.compose-tests \

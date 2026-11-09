@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""Druckt eine .eml ueber Thunderbirds eigene Druckengine als PDF.
+"""Print an .eml to PDF through Thunderbird's own print engine.
 
-Beispiel:
+Example:
   ./tb-print.py --eml "../../02_Kamera_Bug/Email_....eml" --out /tmp/x.pdf
 """
 import argparse
@@ -19,8 +19,8 @@ def socket_path():
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--eml", required=True, help="Pfad zur .eml-Datei")
-    ap.add_argument("--out", required=True, help="Ziel-PDF")
+    ap.add_argument("--eml", required=True, help="Path to the .eml file")
+    ap.add_argument("--out", required=True, help="Target PDF")
     ap.add_argument("--timeout", type=float, default=120.0)
     ap.add_argument("--socket", default=socket_path())
     args = ap.parse_args()
@@ -36,7 +36,7 @@ def main():
     try:
         sock.connect(args.socket)
     except (FileNotFoundError, ConnectionRefusedError):
-        print("Kein Host erreichbar (%s)." % args.socket, file=sys.stderr)
+        print("No host reachable (%s)." % args.socket, file=sys.stderr)
         return 3
     try:
         with sock, sock.makefile("rwb") as stream:
@@ -44,10 +44,10 @@ def main():
             stream.flush()
             line = stream.readline()
     except socket.timeout:
-        print("Zeitueberschreitung: keine Antwort vom Add-on.", file=sys.stderr)
+        print("Timeout: no answer from the add-on.", file=sys.stderr)
         return 2
     if not line:
-        print("Verbindung ohne Antwort geschlossen.", file=sys.stderr)
+        print("Connection closed without an answer.", file=sys.stderr)
         return 2
     result = json.loads(line.decode("utf-8"))
     print(json.dumps(result, indent=2, ensure_ascii=False))

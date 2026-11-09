@@ -10,12 +10,13 @@ is sent by hand; nothing is ever sent automatically.
 
 | Path | Purpose |
 |---|---|
-| `manifest.json`, `background.js`, `quote.js`, `experiments/` | Add-on (Manifest V3, ID `tb-cli-tools@local`, version 1.4) |
+| `manifest.json`, `background.js`, `quote.js`, `experiments/` | Add-on (Manifest V3, ID `tb-cli-tools@local`, version 1.8) |
 | `host/tb-cli-tools-host.py` | Native-messaging host: socket for the CLIs, HTTP for attachment data |
 | `host/tb-cli-tools.json.in` | Host manifest, `@HOST@` is substituted (path must be free of spaces!) |
 | `cli/tb-compose.py` | CLI for new messages |
 | `cli/tb-reply.py` | CLI for replies |
 | `cli/tb-print.py` | CLI for PDF printing |
+| `cli/tb-label.py` | CLI to label/copy/move messages (Gmail labels are folders) |
 | `tests/quote.test.mjs` | Unit tests for `quote.js` (`node --test tests/quote.test.mjs`) |
 | `tests/compose.test.mjs` | Regression test for the `compose` job: the text belongs in `plainTextBody`, otherwise `beginNew` rejects it and the window stays empty |
 | `tests/host_test.py` | Tests for the native-messaging host (`python3 tests/host_test.py`) |
@@ -26,7 +27,7 @@ is sent by hand; nothing is ever sent automatically.
 The flake provides three packages:
 
 ```bash
-nix build github:MBanucu/tb-cli-tools#xpi   # -> result: tb-cli-tools-1.4.xpi
+nix build github:MBanucu/tb-cli-tools#xpi   # -> result: tb-cli-tools-1.8.xpi
 nix build github:MBanucu/tb-cli-tools#host  # native-messaging host + manifest
 nix build github:MBanucu/tb-cli-tools#cli   # tb-reply, tb-compose and tb-print
 ```
@@ -110,6 +111,28 @@ is sent by hand. By default the text is set as plain text (`isPlainText` plus
 `plainTextBody`); with `--html` it is treated as HTML. `--cc`, `--bcc` and
 `--attach` work as they do for `tb-reply`.
 
+## Labels, copy and move
+
+Gmail labels are IMAP folders, so copying a message into the folder sets the
+label on the server; no duplicate is created and nothing is removed.
+
+```bash
+tb-label --list-folders
+tb-label --folder "Blackview XPLORE 2" --message-id '<abc@example.com>'
+tb-label --folder "Blackview XPLORE 2" --ids-file ids.txt           # label (skip existing)
+tb-label --folder "Blackview XPLORE 2" --ids-file ids.txt --copy    # always copy
+tb-label --folder "Blackview XPLORE 2" --ids-file ids.txt --move    # move out of the source
+```
+
+`--message-id` may be repeated, `--ids-file` holds one Message-ID per line.
+`--folder` is matched by name or path, `--folder-id` takes the id printed by
+`--list-folders`, and `--account` disambiguates equal names in several accounts.
+The `label` mode skips messages that already carry the label (reported as
+`skipped`); `--query '<json>'` passes a `messages.query` object instead of ids.
+The job returns `folder`, `matched`, `inFolder` (mails already in the label),
+`skipped`, `changed` and the handled
+messages as JSON.
+
 ## Replies
 
 ```bash
@@ -170,6 +193,7 @@ rm -f  ~/.mozilla/native-messaging-hosts/tb_cli_tools.json
 ```bash
 node --test tests/quote.test.mjs   # quote assembly
 node --test tests/compose.test.mjs # compose payload against Thunderbird's format rules
+node --test tests/label.test.mjs   # label/copy/move: folder resolution, skip logic
 python3 tests/host_test.py         # host: port already taken, second instance, dead socket
 ```
 
@@ -177,5 +201,5 @@ All of them also run as flake checks:
 
 ```bash
 nix build .#checks.x86_64-linux.quote-tests .#checks.x86_64-linux.compose-tests \
-          .#checks.x86_64-linux.host-tests
+          .#checks.x86_64-linux.label-tests .#checks.x86_64-linux.host-tests
 ```

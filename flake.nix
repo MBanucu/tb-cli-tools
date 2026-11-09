@@ -6,7 +6,7 @@
   outputs =
     { self, nixpkgs }:
     let
-      version = "1.4";
+      version = "1.8";
       systems = [
         "x86_64-linux"
         "aarch64-linux"
@@ -48,13 +48,14 @@
               --replace-fail '@HOST@' "$out/bin/tb-cli-tools-host.py"
           '';
 
-          # tb-reply and tb-print on PATH.
+          # tb-reply, tb-compose, tb-print and tb-label on PATH.
           cli = pkgs.runCommand "tb-cli-tools-cli-${version}" { } ''
             mkdir -p $out/bin
             install -m755 ${./cli/tb-reply.py} $out/bin/tb-reply
             install -m755 ${./cli/tb-compose.py} $out/bin/tb-compose
             install -m755 ${./cli/tb-print.py} $out/bin/tb-print
-            substituteInPlace $out/bin/tb-reply $out/bin/tb-compose $out/bin/tb-print \
+            install -m755 ${./cli/tb-label.py} $out/bin/tb-label
+            substituteInPlace $out/bin/tb-reply $out/bin/tb-compose $out/bin/tb-print $out/bin/tb-label \
               --replace-fail '#!/usr/bin/env python3' '#!${pkgs.python3}/bin/python3'
           '';
         }
@@ -76,6 +77,15 @@
           cp -r ${./.} repo
           cd repo
           node --test tests/compose.test.mjs
+          touch $out
+        '';
+
+        label-tests = pkgs.runCommand "tb-cli-tools-label-tests" {
+          nativeBuildInputs = [ pkgs.nodejs ];
+        } ''
+          cp -r ${./.} repo
+          cd repo
+          node --test tests/label.test.mjs
           touch $out
         '';
 

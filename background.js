@@ -163,13 +163,24 @@ async function labelJob(job) {
   const ids = [];
   const skipped = [];
 
+  // Read the label folder's messages once and compare Message-IDs. Querying
+  // per message with {folderId, headerMessageId} proved unreliable: it matched
+  // mails that were only in INBOX/All Mail, so unlabelled mail was skipped.
+  const inFolder = new Set();
+  let inFolderCount = 0;
+  if (skipExisting) {
+    const res = await browser.messages.query({ folderId: folder.id });
+    const listed = res.messages || [];
+    inFolderCount = listed.length;
+    for (const message of listed) {
+      for (const variant of messageIdVariants(message.headerMessageId)) inFolder.add(variant);
+    }
+  }
+
   for (const message of messages) {
-    if (skipExisting && message.headerMessageId) {
-      const res = await querySafe({ folderId: folder.id, headerMessageId: message.headerMessageId });
-      if ((res.messages || []).some((m) => m.headerMessageId === message.headerMessageId)) {
-        skipped.push(message);
-        continue;
-      }
+    if (skipExisting && messageIdVariants(message.headerMessageId).some((v) => inFolder.has(v))) {
+      skipped.push(message);
+      continue;
     }
     ids.push(message.id);
   }
@@ -187,6 +198,7 @@ async function labelJob(job) {
     action: job.action,
     folder: { id: folder.id, name: folder.name, path: folder.path, accountId: folder.accountId },
     matched: messages.length,
+    inFolder: inFolderCount,
     skipped: skipped.length,
     changed: ids.length,
     messages: messages.slice(0, 100).map((m) => ({

@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "tb-cli-tools",
-  "version": "1.5",
+  "version": "1.6",
   "description": "On a native-messaging request, opens a real reply in the compose window (quote and threading like the Reply button), starts new messages, labels/copies/moves messages, and prints .eml files to PDF with Thunderbird's own print engine.",
   "browser_specific_settings": {
     "gecko": { "id": "tb-cli-tools@local", "strict_min_version": "128.0" }

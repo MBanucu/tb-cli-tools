@@ -57,9 +57,9 @@ function loadExtension({ folders = [LABEL], messages = MESSAGES, inFolder = [] }
       query: async (q) => {
         calls.queries.push(q);
         if (q.headerMessageId) {
-          const pool = q.folderId ? inFolder : messages;
-          return { messages: pool.filter((m) => m.headerMessageId === q.headerMessageId) };
+          return { messages: messages.filter((m) => m.headerMessageId === q.headerMessageId) };
         }
+        if (q.folderId) return { messages: inFolder };
         return { messages: [] };
       },
       get: async (id) => messages.find((m) => m.id === id),
@@ -99,9 +99,20 @@ test("label copies matching Message-IDs into the folder and skips existing", asy
   assert.equal(result.ok, true, result.error);
   assert.equal(result.action, "label");
   assert.equal(result.matched, 2);
+  assert.equal(result.inFolder, 1);
   assert.equal(result.skipped, 1);
   assert.equal(result.changed, 1);
   assert.equal(result.folder.path, LABEL.path);
+});
+
+test("mail that is only in another folder is labelled, not skipped", async () => {
+  const ext = loadExtension({ inFolder: [] });
+  await ext.run({ action: "label", folder: "Blackview XPLORE 2", headerMessageIds: ["<b@example.com>"] });
+
+  assert.deepEqual(Array.from(ext.calls.copy[0].ids), [12]);
+  const result = ext.last();
+  assert.equal(result.skipped, 0, "mail outside the folder must not count as labelled");
+  assert.equal(result.changed, 1);
 });
 
 test("copy always copies, even if the message is already in the folder", async () => {

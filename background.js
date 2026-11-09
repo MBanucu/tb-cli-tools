@@ -33,7 +33,7 @@ function connect() {
     try {
       port.postMessage(Object.assign({ type: "result", id: msg.id }, res));
     } catch (e) {
-      /* Port weg - Ergebnis geht verloren, CLI meldet Zeitueberschreitung */
+      /* port gone - the result is lost, the CLI reports a timeout */
     }
   });
   port.onDisconnect.addListener(() => {
@@ -102,8 +102,8 @@ async function runJob(job) {
   if (job.action === "compose") {
     const details = { subject: String(job.subject || "") };
     const body = String(job.body || "");
-    // beginNew lehnt isPlainText:true zusammen mit "body" ab ("Conflicting
-    // format setting"); im Textmodus muss der Text in plainTextBody stehen.
+    // beginNew rejects isPlainText:true together with "body" ("Conflicting
+    // format setting"); in text mode the text has to go into plainTextBody.
     if (job.plainText === false) {
       details.isPlainText = false;
       details.body = body;
@@ -138,8 +138,8 @@ async function runJob(job) {
   const msg = await findMessage(job);
   const replyType = job.all ? "replyToAll" : "replyToSender";
 
-  // Kein Format erzwingen: Thunderbird antwortet so, wie es der Antwort-Button
-  // auch tut (Identity-Standard, bei Gmail also HTML mit blockquote).
+  // Do not force a format: Thunderbird replies the way its Reply button does
+  // (identity default, with Gmail that is HTML including blockquote).
   const details = {};
   if (job.plainText === true) details.isPlainText = true;
   if (job.plainText === false) details.isPlainText = false;
@@ -150,9 +150,9 @@ async function runJob(job) {
   const quoted = html ? (before.body || "") : (before.plainTextBody || "");
   const mine = job.body || "";
 
-  // Eigenen Text als Absatz davorsetzen, Zitat unveraendert uebernehmen – so
-  // wie der Antwort-Button es tut. Das Aufraeumen des Zitatkopfs (vorgezogene
-  // <meta>-Tags, leere Schreibmarken-Zeile) steckt in quote.js, siehe Tests.
+  // Prepend the own text as a paragraph and keep the quote untouched - just
+  // like the Reply button does. Cleaning the quote head (hoisted <meta> tags,
+  // the empty caret paragraph) lives in quote.js, see the tests.
   const patch = html
     ? { body: globalThis.TBQuote.buildHtmlBody(mine, quoted) }
     : { plainTextBody: globalThis.TBQuote.buildPlainTextBody(mine, quoted) };
@@ -183,7 +183,7 @@ async function runJob(job) {
   };
 }
 
-// Event-Page wach halten: offener native-Port tut das, Wecker als Rueckfall
+// Keep the event page awake: an open native port does that, the alarm is the fallback
 if (browser.alarms) {
   browser.alarms.create("tb-cli-tools-keepalive", { periodInMinutes: 1 });
 }

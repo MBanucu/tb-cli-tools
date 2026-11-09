@@ -1,16 +1,16 @@
 "use strict";
 
-/* Experiment-API: druckt eine .eml ueber Thunderbirds eigene Druck-Pipeline.
+/* Experiment API: prints an .eml through Thunderbird's own print pipeline.
  *
- * Weg wie beim Kontextmenue "Drucken":
- *   1. MailUtils.openEMLFile() oeffnet die Datei als echte Nachricht.
- *   2. Auf den messagepane-Browser warten, bis Nachricht und Dokument fertig
- *      geladen sind.
- *   3. browsingContext.print() mit dem Pseudo-Drucker "Mozilla Save to PDF"
- *      und gesetztem toFileName - derselbe Aufruf wie nach "In Datei
- *      speichern", nur ohne Dateidialog.
+ * Same path as the "Print" context menu entry:
+ *   1. MailUtils.openEMLFile() opens the file as a real message.
+ *   2. Wait for the messagepane browser until message and document finished
+ *      loading.
+ *   3. browsingContext.print() with the "Mozilla Save to PDF" pseudo printer
+ *      and toFileName set - the same call as "Save to File", only without the
+ *      file dialog.
  *
- * Jeder Schritt setzt `stage`, damit Fehler zuzuordnen sind.
+ * Every step sets `stage`, so failures can be attributed.
  */
 
 const { MailUtils } = ChromeUtils.importESModule(
@@ -51,8 +51,8 @@ async function waitFor(fn, timeout = 30000, interval = 150) {
   );
 }
 
-/* nsIPrintSettings ist ein XPCOM-Objekt, browsingContext.print() will ein
- * WebIDL-Dictionary - wie print.js nur primitive Attribute uebernehmen. */
+/* nsIPrintSettings is an XPCOM object, browsingContext.print() wants a WebIDL
+ * dictionary - copy primitive attributes only, like print.js does. */
 function serializeSettings(settings) {
   const skip = /^(k[A-Z]|resolution)/;
   const types = new Set(["string", "boolean", "number", "undefined"]);
@@ -63,7 +63,7 @@ function serializeSettings(settings) {
         out[key] = settings[key];
       }
     } catch (e) {
-      /* einzelne Attribute werfen beim Zugriff */
+      /* individual attributes throw on access */
     }
   }
   return out;
@@ -88,8 +88,8 @@ this.tbPrint = class extends ExtensionAPI {
           let stage = "start";
           let tab = null;
           let tabmail = null;
-          // Remote-Bilder sind in Thunderbird gesperrt; fuer den Druck kurz
-          // erlauben und den alten Zustand danach wiederherstellen.
+          // Remote images are blocked in Thunderbird; allow them for the print
+          // run and restore the previous state afterwards.
           const PREF_REMOTE = "mailnews.message_display.disable_remote_image";
           let prefSaved = false;
           let prefOld = null;
@@ -199,7 +199,7 @@ this.tbPrint = class extends ExtensionAPI {
               try {
                 settings[k] = v;
               } catch (e) {
-                /* schreibgeschuetztes Attribut */
+                /* read-only attribute */
               }
             };
             set("printerName", SAVE_TO_PDF);
@@ -256,13 +256,13 @@ this.tbPrint = class extends ExtensionAPI {
                 Services.prefs.clearUserPref(PREF_REMOTE);
               }
             } catch (e) {
-              /* Pref liess sich nicht zuruecksetzen */
+              /* the pref could not be restored */
             }
             if (tab && tabmail) {
               try {
                 tabmail.closeTab(tab);
               } catch (e) {
-                /* Tab schon zu */
+                /* tab already closed */
               }
             }
           }

@@ -124,7 +124,7 @@ def handle_client(conn):
                 res = results.pop(job_id, {"ok": False, "error": "timeout in the host"})
             stream.write((json.dumps(res) + "\n").encode("utf-8"))
             stream.flush()
-    except Exception as exc:  # CLI soll eine Antwort bekommen, kein haengender Socket
+    except Exception as exc:  # the CLI must get an answer, not a hanging socket
         log("job failed: %r" % (exc,))
 
 

@@ -78,6 +78,25 @@ grep -q extensions.autoDisableScopes "$P/prefs.js" || \
 The host has to live at a path **without spaces**, because `connectNative` splits
 `path` on spaces.
 
+## Starting Thunderbird from a shell
+
+`scripts/tb-launch.sh` starts Thunderbird inside the running graphical session
+via a transient `systemd-run --user` unit, waits until the host socket answers,
+and handles the profile lock correctly:
+
+```bash
+scripts/tb-launch.sh                                  # start, or say it is already running
+TB_PROFILE=~/.thunderbird/work scripts/tb-launch.sh   # other profile
+```
+
+It never deletes `lock`/`.parentlock` while a Thunderbird process is alive, waits
+for an exiting instance instead of starting a second one on the same profile, and
+retries once if the first start dies. Startup crashes seen here are `SIGSEGV`
+inside `libfontconfig` (`FcStrBufString`), not the profile lock - the
+`nsProfileLock::FatalSignalHandler` frame in the core dump only re-raises the
+signal so a core is written. Unit name, waits and binary can be overridden with
+`TB_UNIT`, `TB_WAIT_STOP`, `TB_WAIT_READY` and `TB_BIN`.
+
 ## New message
 
 ```bash

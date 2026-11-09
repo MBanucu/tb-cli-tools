@@ -1,18 +1,18 @@
-/* Zitat-Zusammenbau fuer tb-cli-tools.
+/* Quote assembly for tb-cli-tools.
  *
- * Wird als klassisches Background-Script geladen (manifest.json: zuerst
- * quote.js, dann background.js) und von tests/quote.test.mjs geprueft.
+ * Loaded as a classic background script (manifest.json: quote.js first, then
+ * background.js) and exercised by tests/quote.test.mjs.
  *
- * Zielformat ist exakt das, was Thunderbirds Antwort-Button erzeugt:
+ * Target format is exactly what Thunderbird's Reply button produces:
  *
- *   <p>eigener Text<br>zweite Zeile</p><div class="moz-cite-prefix">On ... wrote:<br></div><blockquote type="cite" cite="mid:...">...</blockquote>
+ *   <p>own text<br>second line</p><div class="moz-cite-prefix">On ... wrote:<br></div><blockquote type="cite" cite="mid:...">...</blockquote>
  *
- * Thunderbird liefert den Zitatteil (Zitatkopf + blockquote) bereits fertig in
- * ComposeDetails.body. Problematisch ist nur der Anfang dieses Strings: dort
- * stehen die <meta>-Tags des zitierten HTMLs und der leere Absatz, den
- * Thunderbird als Schreibmarke anlegt. Beim Setzen per setComposeDetails
- * werden beide sichtbar (zusaetzliche Leerzeile, ungueltiges <meta> im Body),
- * nativ dagegen nicht. Darum wird nur dieser Kopfbereich aufgeraeumt.
+ * Thunderbird already delivers the quote part (cite prefix + blockquote)
+ * complete in ComposeDetails.body. Only the start of that string is
+ * problematic: it carries the <meta> tags of the quoted HTML and the empty
+ * paragraph Thunderbird uses as a caret. Setting it via setComposeDetails
+ * makes both visible (an extra blank line, an invalid <meta> in the body),
+ * while the native path hides them. So only that head is cleaned up.
  */
 "use strict";
 
@@ -32,13 +32,13 @@
     return escapeHtml(toLf(text)).replace(/\n/g, "<br>");
   }
 
-  // Leerer Absatz als Schreibmarke: <p><br></p>, <p><br>\n</p>, <p>&nbsp;</p> ...
+  // Empty paragraph as caret: <p><br></p>, <p><br>\n</p>, <p>&nbsp;</p> ...
   var EMPTY_PARAGRAPH = /^<p>(?:\s|&nbsp;|<br\s*\/?>)*<\/p>/i;
   var META_TAG = /^<meta\b[^>]*>\s*/i;
   var LEADING_SPACE = /^[\s\r\n]+/;
 
-  // Entfernt nur den Kopf des Zitatteils (vor Zitatkopf/blockquote), niemals
-  // Inhalt innerhalb des Zitats.
+  // Removes only the head of the quote part (before cite prefix/blockquote),
+  // never anything inside the quote.
   function stripLeadingNoise(quoted) {
     var rest = String(quoted === null || quoted === undefined ? "" : quoted)
       .replace(/^\uFEFF/, "")
@@ -57,10 +57,10 @@
     return rest;
   }
 
-  // charset-<meta> aus dem Zitat entfernen: Die Zeichenkodierung steht im
-  // MIME-Header. Bleibt so ein Tag im Zitat, zieht der HTML-Parser es beim
-  // Setzen des Bodys aus dem <blockquote> heraus und stellt es sichtbar vor den
-  // Zitatkopf – Thunderbirds Antwort-Button erzeugt das nicht.
+  // Strip the charset <meta> from the quote: the encoding is in the MIME
+  // header. Left in the quote, the HTML parser hoists such a tag out of the
+  // <blockquote> and shows it in front of the cite prefix - the Reply button
+  // never produces that.
   var CHARSET_META = /<meta\b[^>]*(?:charset|http-equiv\s*=\s*["']?content-type)[^>]*>\s*/gi;
 
   function stripCharsetMeta(quoted) {
@@ -71,7 +71,7 @@
     return toLf(text).replace(/[ \t]+$/gm, "").replace(/[\s\u00a0]+$/, "");
   }
 
-  // HTML-Antwort: eigener Text als ein Absatz, danach das unveraenderte Zitat.
+  // HTML reply: own text as one paragraph, then the untouched quote.
   function buildHtmlBody(mine, quoted) {
     var own = trimBodyText(mine);
     var quote = stripCharsetMeta(stripLeadingNoise(quoted));
@@ -79,7 +79,7 @@
     return quote ? paragraph + quote : paragraph;
   }
 
-  // Text-Antwort: Thunderbird stellt dem Zitat schon "> " voran.
+  // Text reply: Thunderbird already prefixes the quote with "> ".
   function buildPlainTextBody(mine, quoted) {
     var own = trimBodyText(mine);
     var quote = String(quoted === null || quoted === undefined ? "" : quoted).replace(LEADING_SPACE, "");

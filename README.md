@@ -51,7 +51,7 @@ users.users.michi.packages = [
 ];
 
 # Home Manager: Host-Manifest und CLIs
-home.file.".thunderbird/native-messaging-hosts/tb_cli_reply.json".source =
+home.file.".mozilla/native-messaging-hosts/tb_cli_reply.json".source =
   "${tb-cli-reply.packages.${system}.host}/lib/mozilla/native-messaging-hosts/tb_cli_reply.json";
 home.packages = [ tb-cli-reply.packages.${system}.cli ];
 ```
@@ -128,5 +128,5 @@ Hinweise:
 
 ```bash
 rm -rf ~/.thunderbird/<profil>/extensions/tb-cli-reply@local
-rm -f  ~/.thunderbird/native-messaging-hosts/tb_cli_reply.json
+rm -f  ~/.mozilla/native-messaging-hosts/tb_cli_reply.json
 ```

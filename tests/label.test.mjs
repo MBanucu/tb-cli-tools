@@ -167,6 +167,18 @@ test("unknown Message-ID fails with a clear error", async () => {
   assert.match(result.error, /Message not found/);
 });
 
+test("the same Message-ID in several folders is copied once", async () => {
+  const dupes = [
+    { id: 21, headerMessageId: "<c@example.com>", subject: "Bestellt" },
+    { id: 22, headerMessageId: "<c@example.com>", subject: "Bestellt" },
+  ];
+  const ext = loadExtension({ messages: dupes, inFolder: [] });
+  await ext.run({ action: "label", folder: "Blackview XPLORE 2", headerMessageIds: ["<c@example.com>"] });
+
+  assert.deepEqual(Array.from(ext.calls.copy[0].ids), [21]);
+  assert.equal(ext.last().changed, 1);
+});
+
 test("save exports the raw message through downloads", async () => {
   const ext = loadExtension();
   await ext.run({ action: "save", saveDir: "tb-export", headerMessageIds: ["<a@example.com>"] });

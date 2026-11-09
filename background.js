@@ -177,7 +177,13 @@ async function labelJob(job) {
     }
   }
 
+  const seen = new Set();
   for (const message of messages) {
+    // The same mail is returned once per folder it sits in (INBOX, All Mail,
+    // label); copy it only once.
+    const key = messageIdVariants(message.headerMessageId)[0] || String(message.id);
+    if (seen.has(key)) continue;
+    seen.add(key);
     if (skipExisting && messageIdVariants(message.headerMessageId).some((v) => inFolder.has(v))) {
       skipped.push(message);
       continue;

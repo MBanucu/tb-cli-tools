@@ -10,7 +10,7 @@ is sent by hand; nothing is ever sent automatically.
 
 | Path | Purpose |
 |---|---|
-| `manifest.json`, `background.js`, `quote.js`, `experiments/` | Add-on (Manifest V3, ID `tb-cli-tools@local`, version 1.7) |
+| `manifest.json`, `background.js`, `quote.js`, `experiments/` | Add-on (Manifest V3, ID `tb-cli-tools@local`, version 1.8) |
 | `host/tb-cli-tools-host.py` | Native-messaging host: socket for the CLIs, HTTP for attachment data |
 | `host/tb-cli-tools.json.in` | Host manifest, `@HOST@` is substituted (path must be free of spaces!) |
 | `cli/tb-compose.py` | CLI for new messages |
@@ -27,7 +27,7 @@ is sent by hand; nothing is ever sent automatically.
 The flake provides three packages:
 
 ```bash
-nix build github:MBanucu/tb-cli-tools#xpi   # -> result: tb-cli-tools-1.7.xpi
+nix build github:MBanucu/tb-cli-tools#xpi   # -> result: tb-cli-tools-1.8.xpi
 nix build github:MBanucu/tb-cli-tools#host  # native-messaging host + manifest
 nix build github:MBanucu/tb-cli-tools#cli   # tb-reply, tb-compose and tb-print
 ```

@@ -17,6 +17,7 @@ bleibt offen und wird von Hand gesendet; nichts wird automatisch verschickt.
 | `cli/tb-reply.py` | CLI für Antworten |
 | `cli/tb-print.py` | CLI für PDF-Druck |
 | `tests/quote.test.mjs` | Unit-Tests für `quote.js` (`node --test tests/quote.test.mjs`) |
+| `tests/compose.test.mjs` | Regressionstest für den `compose`-Auftrag: Text gehört in `plainTextBody`, sonst lehnt `beginNew` ab und das Fenster bleibt leer |
 | `tests/host_test.py` | Tests für den Native-Messaging-Host (`python3 tests/host_test.py`) |
 | `flake.nix` | XPI, Host und CLI-Wrapper als Nix-Pakete |
 
@@ -150,11 +151,13 @@ rm -f  ~/.mozilla/native-messaging-hosts/tb_cli_tools.json
 
 ```bash
 node --test tests/quote.test.mjs   # Zitat-Zusammenbau
+node --test tests/compose.test.mjs # compose-Payload gegen Thunderbirds Formatregeln
 python3 tests/host_test.py         # Host: belegter HTTP-Port, zweite Instanz, toter Socket
 ```
 
 Beides laeuft auch als Flake-Check:
 
 ```bash
-nix build .#checks.x86_64-linux.quote-tests .#checks.x86_64-linux.host-tests
+nix build .#checks.x86_64-linux.quote-tests .#checks.x86_64-linux.compose-tests \
+          .#checks.x86_64-linux.host-tests
 ```

@@ -70,6 +70,15 @@
           touch $out
         '';
 
+        compose-tests = pkgs.runCommand "tb-cli-tools-compose-tests" {
+          nativeBuildInputs = [ pkgs.nodejs ];
+        } ''
+          cp -r ${./.} repo
+          cd repo
+          node --test tests/compose.test.mjs
+          touch $out
+        '';
+
         host-tests = pkgs.runCommand "tb-cli-tools-host-tests" {
           nativeBuildInputs = [ pkgs.python3 ];
         } ''

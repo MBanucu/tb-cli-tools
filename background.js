@@ -210,6 +210,74 @@ async function labelJob(job) {
   };
 }
 
+// Export: save the raw message as .eml through the downloads API.
+function exportName(message) {
+  const d = new Date(message.date || Date.now());
+  const pad = (n) => String(n).padStart(2, "0");
+  const stamp =
+    d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate()) +
+    "_" + pad(d.getHours()) + pad(d.getMinutes());
+  const subject = String(message.subject || "message")
+    .replace(/[^\p{L}\p{N} .()_-]+/gu, "_")
+    .replace(/\s+/g, "_")
+    .slice(0, 90)
+    .replace(/_+$/, "");
+  return "Email_" + stamp + "_" + subject + ".eml";
+}
+
+async function waitForDownload(id, timeout = 60000) {
+  const end = Date.now() + timeout;
+  while (Date.now() < end) {
+    const [info] = await browser.downloads.search({ id });
+    if (info && info.state === "complete") return info;
+    if (info && info.state === "interrupted") {
+      throw new Error("Download interrupted: " + (info.error || "unknown"));
+    }
+    await new Promise((resolve) => setTimeout(resolve, 200));
+  }
+  throw new Error("Download did not finish in time");
+}
+
+async function saveJob(job) {
+  const messages = await resolveMessages(job);
+  const dir = String(job.saveDir || "tb-export")
+    .replace(/\\/g, "/")
+    .split("/")
+    .filter((part) => part && part !== "." && part !== "..")
+    .join("/");
+  const saved = [];
+  const seen = new Set();
+  for (const message of messages) {
+    // The same mail is returned from INBOX, All Mail and the label folder.
+    const key = messageIdVariants(message.headerMessageId)[0] || String(message.id);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    const raw = await browser.messages.getRaw(message.id);
+    const url = URL.createObjectURL(raw);
+    let downloadId;
+    try {
+      downloadId = await browser.downloads.download({
+        url,
+        filename: (dir ? dir + "/" : "") + exportName(message),
+        conflictAction: "uniquify",
+        saveAs: false,
+      });
+    } finally {
+      setTimeout(() => URL.revokeObjectURL(url), 60000);
+    }
+    const info = await waitForDownload(downloadId);
+    saved.push({
+      id: message.id,
+      subject: message.subject,
+      date: message.date,
+      headerMessageId: message.headerMessageId,
+      path: info.filename,
+      bytes: info.fileSize,
+    });
+  }
+  return { ok: true, count: saved.length, saved };
+}
+
 async function fileFromUrl(url, name) {
   const r = await fetch(url, { cache: "no-store" });
   if (r.status !== 200) throw new Error("Attachment unavailable: " + name + " (HTTP " + r.status + ")");
@@ -241,6 +309,10 @@ async function runJob(job) {
       outPath: String(job.outPath || ""),
       probe: job.probe === true,
     });
+  }
+
+  if (job.action === "save") {
+    return await saveJob(job);
   }
 
   if (job.action === "folders") {

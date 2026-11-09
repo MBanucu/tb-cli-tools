@@ -30,7 +30,7 @@ const MESSAGES = [
 ];
 
 function loadExtension({ folders = [LABEL], messages = MESSAGES, inFolder = [] } = {}) {
-  const calls = { copy: [], move: [], queries: [] };
+  const calls = { copy: [], move: [], queries: [], downloads: [] };
   const results = [];
   let onJob = null;
 
@@ -69,10 +69,18 @@ function loadExtension({ folders = [LABEL], messages = MESSAGES, inFolder = [] }
       move: async (ids, folderId, options) => {
         calls.move.push({ ids, folderId, options });
       },
+      getRaw: async () => new Blob(["raw message"]),
+    },
+    downloads: {
+      download: async (options) => {
+        calls.downloads.push(options);
+        return 1;
+      },
+      search: async () => [{ state: "complete", filename: "/tmp/Downloads/x.eml", fileSize: 11 }],
     },
   };
 
-  vm.runInNewContext(source, { browser, setTimeout, clearTimeout, console });
+  vm.runInNewContext(source, { browser, setTimeout, clearTimeout, console, URL });
 
   return {
     calls,
@@ -157,6 +165,18 @@ test("unknown Message-ID fails with a clear error", async () => {
   const result = ext.last();
   assert.equal(result.ok, false);
   assert.match(result.error, /Message not found/);
+});
+
+test("save exports the raw message through downloads", async () => {
+  const ext = loadExtension();
+  await ext.run({ action: "save", saveDir: "tb-export", headerMessageIds: ["<a@example.com>"] });
+
+  const result = ext.last();
+  assert.equal(result.ok, true, result.error);
+  assert.equal(result.count, 1);
+  assert.equal(result.saved[0].headerMessageId, "<a@example.com>");
+  assert.equal(result.saved[0].path, "/tmp/Downloads/x.eml");
+  assert.match(ext.calls.downloads[0].filename, /^tb-export\/Email_\d{4}-\d{2}-\d{2}_\d{4}_/);
 });
 
 test("folders action lists folders", async () => {

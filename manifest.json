@@ -1,0 +1,22 @@
+{
+  "manifest_version": 3,
+  "name": "tb-cli-reply",
+  "version": "1.0",
+  "description": "Erzeugt per native-messaging-Auftrag eine echte Antwort im Verfassen-Fenster (Zitat + Threading wie der Antwort-Button).",
+  "browser_specific_settings": {
+    "gecko": { "id": "tb-cli-reply@local", "strict_min_version": "128.0" }
+  },
+  "permissions": ["compose", "messagesRead", "nativeMessaging", "alarms"],
+  "experiment_apis": {
+    "tbPrint": {
+      "schema": "experiments/print_schema.json",
+      "parent": {
+        "scopes": ["addon_parent"],
+        "paths": [["tbPrint"]],
+        "script": "experiments/print_parent.js"
+      }
+    }
+  },
+  "host_permissions": ["http://127.0.0.1/*"],
+  "background": { "scripts": ["quote.js", "background.js"] }
+}

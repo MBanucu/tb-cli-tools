@@ -1,0 +1,154 @@
+
+
+const HOST_NAME = "tb_cli_reply";
+let port = null;
+let reconnectTimer = null;
+
+function scheduleReconnect() {
+  if (reconnectTimer) return;
+  reconnectTimer = setTimeout(() => {
+    reconnectTimer = null;
+    connect();
+  }, 3000);
+}
+
+function connect() {
+  if (port) return;
+  try {
+    port = browser.runtime.connectNative(HOST_NAME);
+
+  } catch (e) {
+    port = null;
+    scheduleReconnect();
+    return;
+  }
+  port.onMessage.addListener(async (msg) => {
+    if (!msg || msg.type !== "job") return;
+    let res;
+    try {
+      res = await runJob(msg.job || {});
+    } catch (e) {
+      res = { ok: false, error: String((e && e.message) || e) };
+    }
+    try {
+      port.postMessage(Object.assign({ type: "result", id: msg.id }, res));
+    } catch (e) {
+      /* Port weg - Ergebnis geht verloren, CLI meldet Zeitueberschreitung */
+    }
+  });
+  port.onDisconnect.addListener(() => {
+
+    port = null;
+    scheduleReconnect();
+  });
+}
+
+async function querySafe(q) {
+  try {
+    return await browser.messages.query(q);
+  } catch (e) {
+    return { messages: [] };
+  }
+}
+
+async function findMessage(job) {
+  const raw = String(job.headerMessageId || job.messageId || "").trim();
+  const bare = raw.replace(/^</, "").replace(/>$/, "");
+  const variants = [raw, bare, "<" + bare + ">"].filter((v, i, a) => v && a.indexOf(v) === i);
+  for (const v of variants) {
+    const res = await querySafe({ headerMessageId: v });
+    if (res.messages && res.messages.length) return res.messages[0];
+  }
+  if (job.subject) {
+    const res = await querySafe({ subject: job.subject });
+    if (res.messages && res.messages.length) return res.messages[0];
+  }
+  throw new Error("Nachricht nicht gefunden: " + raw);
+}
+
+async function fileFromUrl(url, name) {
+  const r = await fetch(url, { cache: "no-store" });
+  if (r.status !== 200) throw new Error("Anhang nicht abrufbar: " + name + " (HTTP " + r.status + ")");
+  const blob = await r.blob();
+  return new File([blob], name, { type: blob.type || "application/octet-stream" });
+}
+
+async function runJob(job) {
+  if (job.action === "ping") {
+    const info = {
+      ok: true,
+      version: browser.runtime.getManifest().version,
+      api: typeof browser.tbPrint,
+      funcs: browser.tbPrint ? Object.keys(browser.tbPrint) : [],
+    };
+    if (typeof browser.tbPrint?.ping === "function") {
+      try {
+        info.ping = await browser.tbPrint.ping();
+      } catch (e) {
+        info.ping = "Fehler: " + String((e && e.message) || e);
+      }
+    }
+    return info;
+  }
+
+  if (job.action === "print") {
+    return await browser.tbPrint.printEml({
+      emlPath: String(job.emlPath || ""),
+      outPath: String(job.outPath || ""),
+      probe: job.probe === true,
+    });
+  }
+
+  const msg = await findMessage(job);
+  const replyType = job.all ? "replyToAll" : "replyToSender";
+
+  // Kein Format erzwingen: Thunderbird antwortet so, wie es der Antwort-Button
+  // auch tut (Identity-Standard, bei Gmail also HTML mit blockquote).
+  const details = {};
+  if (job.plainText === true) details.isPlainText = true;
+  if (job.plainText === false) details.isPlainText = false;
+  const tab = await browser.compose.beginReply(msg.id, replyType, details);
+
+  const before = await browser.compose.getComposeDetails(tab.id);
+  const html = !before.isPlainText;
+  const quoted = html ? (before.body || "") : (before.plainTextBody || "");
+  const mine = job.body || "";
+
+  // Eigenen Text als Absatz davorsetzen, Zitat unveraendert uebernehmen – so
+  // wie der Antwort-Button es tut. Das Aufraeumen des Zitatkopfs (vorgezogene
+  // <meta>-Tags, leere Schreibmarken-Zeile) steckt in quote.js, siehe Tests.
+  const patch = html
+    ? { body: globalThis.TBQuote.buildHtmlBody(mine, quoted) }
+    : { plainTextBody: globalThis.TBQuote.buildPlainTextBody(mine, quoted) };
+  await browser.compose.setComposeDetails(tab.id, patch);
+
+  for (const a of (job.attachmentUrls || [])) {
+    await browser.compose.addAttachment(tab.id, { file: await fileFromUrl(a.url, a.name) });
+  }
+
+  const after = await browser.compose.getComposeDetails(tab.id);
+  const attachments = await browser.compose.listAttachments(tab.id);
+  const finalBody = html ? (after.body || "") : (after.plainTextBody || "");
+  return {
+    ok: true,
+    windowId: tab.windowId,
+    to: (after.to || []).join(", "),
+    subject: after.subject,
+    format: html ? "html" : "text",
+    bodyChars: finalBody.length,
+    quotedChars: quoted.length,
+    quote: {
+      blockquote: /<blockquote[^>]*type="cite"|<blockquote/i.test(quoted),
+      citePrefix: /moz-cite-prefix/i.test(quoted),
+      signature: /moz-signature/i.test(quoted),
+    },
+    quoteHead: quoted.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").slice(0, 160),
+    attachments: attachments.map((a) => a.name + " (" + (a.size || 0) + " B)"),
+  };
+}
+
+// Event-Page wach halten: offener native-Port tut das, Wecker als Rueckfall
+if (browser.alarms) {
+  browser.alarms.create("tb-cli-reply-keepalive", { periodInMinutes: 1 });
+}
+connect();

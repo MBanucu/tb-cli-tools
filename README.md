@@ -203,3 +203,22 @@ All of them also run as flake checks:
 nix build .#checks.x86_64-linux.quote-tests .#checks.x86_64-linux.compose-tests \
           .#checks.x86_64-linux.label-tests .#checks.x86_64-linux.host-tests
 ```
+
+## Release notes
+
+### 1.8 (2026-11-09, tag `v1.8`)
+
+- New add-on jobs `label`, `copy` and `move`. Gmail labels are IMAP folders, so
+  labelling copies the message into the label folder; the `label` job skips
+  mails that already carry the label.
+- New `save` job that exports messages as raw `.eml` through the downloads API
+  (the print job still renders `.eml` to PDF).
+- Messages are deduplicated by Message-ID, so a mail that exists in INBOX, All
+  Mail and the label is copied and saved once, not once per folder.
+- New `tb-label` CLI for listing folders, labelling, copying and moving
+  (`--list-folders`, `--folder`, `--folder-id`, `--account`, `--message-id`,
+  `--ids-file`, `--query`, `--copy`, `--move`).
+- Flake installs `tb-label` and adds the `label-tests` check; `manifest.json` is
+  bumped to 1.8.
+- `scripts/tb-launch.sh` starts Thunderbird through a transient `systemd-run
+  --user` unit and handles stale profile locks.

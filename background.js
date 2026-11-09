@@ -51,10 +51,15 @@ async function querySafe(q) {
   }
 }
 
+function messageIdVariants(value) {
+  const raw = String(value || "").trim();
+  const bare = raw.replace(/^</, "").replace(/>$/, "");
+  return [raw, bare, "<" + bare + ">"].filter((v, i, a) => v && a.indexOf(v) === i);
+}
+
 async function findMessage(job) {
   const raw = String(job.headerMessageId || job.messageId || "").trim();
-  const bare = raw.replace(/^</, "").replace(/>$/, "");
-  const variants = [raw, bare, "<" + bare + ">"].filter((v, i, a) => v && a.indexOf(v) === i);
+  const variants = messageIdVariants(raw);
   for (const v of variants) {
     const res = await querySafe({ headerMessageId: v });
     if (res.messages && res.messages.length) return res.messages[0];
@@ -64,6 +69,133 @@ async function findMessage(job) {
     if (res.messages && res.messages.length) return res.messages[0];
   }
   throw new Error("Message not found: " + raw);
+}
+
+// Resolve the destination folder: by id, by path, or by label/folder name.
+// Gmail labels are IMAP folders, so copying into the folder sets the label.
+async function resolveFolder(job) {
+  const folderId = String(job.folderId || "").trim();
+  if (folderId) {
+    return await browser.folders.get(folderId);
+  }
+
+  const wanted = String(job.folderPath || job.folder || job.folderName || "").trim();
+  if (!wanted) {
+    throw new Error("No destination folder given (folder, folderPath or folderId).");
+  }
+
+  const base = {};
+  if (job.accountId) base.accountId = job.accountId;
+
+  let matches = await browser.folders.query(Object.assign({ path: wanted }, base));
+  if (!matches.length) {
+    matches = await browser.folders.query(Object.assign({ name: wanted }, base));
+  }
+
+  const needle = wanted.toLowerCase();
+  const exact = matches.filter((f) => {
+    const path = String(f.path || "").toLowerCase();
+    const name = String(f.name || "").toLowerCase();
+    return path === needle || name === needle || path.endsWith("/" + needle);
+  });
+
+  const hits = exact.length ? exact : matches;
+  if (hits.length === 1) return hits[0];
+  if (!hits.length) throw new Error("Folder not found: " + wanted);
+  throw new Error(
+    "Folder name is ambiguous: " + wanted + " (" + hits.map((f) => f.path).join(", ") +
+      "). Pass folderId or accountId."
+  );
+}
+
+// Collect the selected messages from explicit ids, Message-IDs or a query.
+async function resolveMessages(job) {
+  const out = [];
+  const seen = new Set();
+  const add = (message) => {
+    if (message && !seen.has(message.id)) {
+      seen.add(message.id);
+      out.push(message);
+    }
+  };
+
+  for (const id of (Array.isArray(job.messageIds) ? job.messageIds : [])) {
+    try {
+      add(await browser.messages.get(id));
+    } catch (e) {
+      /* one unknown id must not abort the batch */
+    }
+  }
+
+  const ids = []
+    .concat(Array.isArray(job.headerMessageIds) ? job.headerMessageIds : [])
+    .concat(job.headerMessageId ? [job.headerMessageId] : []);
+  for (const value of ids) {
+    let hits = [];
+    for (const variant of messageIdVariants(value)) {
+      const res = await querySafe({ headerMessageId: variant });
+      if (res.messages && res.messages.length) {
+        hits = res.messages;
+        break;
+      }
+    }
+    if (!hits.length) throw new Error("Message not found: " + value);
+    hits.forEach(add);
+  }
+
+  if (!out.length && job.query && typeof job.query === "object") {
+    const res = await querySafe(job.query);
+    (res.messages || []).forEach(add);
+  }
+
+  if (!out.length) {
+    throw new Error("No messages selected (messageIds, headerMessageIds or query).");
+  }
+  return out;
+}
+
+// label = copy into the folder and skip what is already in it (Gmail label);
+// copy = always copy; move = move out of the source folder.
+async function labelJob(job) {
+  const folder = await resolveFolder(job);
+  const messages = await resolveMessages(job);
+  const skipExisting = job.action === "label" || job.skipExisting === true;
+  const ids = [];
+  const skipped = [];
+
+  for (const message of messages) {
+    if (skipExisting && message.headerMessageId) {
+      const res = await querySafe({ folderId: folder.id, headerMessageId: message.headerMessageId });
+      if ((res.messages || []).some((m) => m.headerMessageId === message.headerMessageId)) {
+        skipped.push(message);
+        continue;
+      }
+    }
+    ids.push(message.id);
+  }
+
+  if (ids.length) {
+    if (job.action === "move") {
+      await browser.messages.move(ids, folder.id, { isUserAction: true });
+    } else {
+      await browser.messages.copy(ids, folder.id, { isUserAction: true });
+    }
+  }
+
+  return {
+    ok: true,
+    action: job.action,
+    folder: { id: folder.id, name: folder.name, path: folder.path, accountId: folder.accountId },
+    matched: messages.length,
+    skipped: skipped.length,
+    changed: ids.length,
+    messages: messages.slice(0, 100).map((m) => ({
+      id: m.id,
+      subject: m.subject,
+      date: m.date,
+      headerMessageId: m.headerMessageId,
+    })),
+  };
 }
 
 async function fileFromUrl(url, name) {
@@ -97,6 +229,29 @@ async function runJob(job) {
       outPath: String(job.outPath || ""),
       probe: job.probe === true,
     });
+  }
+
+  if (job.action === "folders") {
+    const query = {};
+    if (job.accountId) query.accountId = job.accountId;
+    if (job.name) query.name = job.name;
+    if (job.path) query.path = job.path;
+    const list = await browser.folders.query(query);
+    return {
+      ok: true,
+      count: list.length,
+      folders: list.map((f) => ({
+        id: f.id,
+        name: f.name,
+        path: f.path,
+        accountId: f.accountId,
+        specialUse: f.specialUse,
+      })),
+    };
+  }
+
+  if (job.action === "label" || job.action === "copy" || job.action === "move") {
+    return await labelJob(job);
   }
 
   if (job.action === "compose") {

@@ -130,7 +130,8 @@ class HostTest(unittest.TestCase):
                 reply = json.loads(conn.makefile("rb").readline().decode("utf-8"))
 
             self.assertFalse(reply.get("ok"))
-            self.assertIn("HTTP-Port", reply.get("error", ""))
+            self.assertIn("HTTP port", reply.get("error", ""))
+            self.assertIn("already in use", reply.get("error", ""))
             time.sleep(0.3)
             self.assertIsNone(proc.poll(), "Host ist nach dem Anhang-Auftrag beendet")
             self.wait_listening(proc)
